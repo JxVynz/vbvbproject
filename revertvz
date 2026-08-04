@@ -1,0 +1,299 @@
+# =======================================================
+# Run as Administrator Check
+# =======================================================
+if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host "[!] Please run this script as Administrator!" -ForegroundColor Red
+    Start-Sleep -Seconds 3
+    exit
+}
+
+Clear-Host
+
+# 1. Header Display
+Write-Host "+-------------------------------------------------------+" -ForegroundColor Cyan
+Write-Host "|                                                       |" -ForegroundColor Cyan
+Write-Host "|               JAME VBVB REVERT SYSTEM                 |" -ForegroundColor Yellow
+Write-Host "|                                                       |" -ForegroundColor Cyan
+Write-Host "+-------------------------------------------------------+" -ForegroundColor Cyan
+Write-Host ""
+
+# 2. Dynamic Hardware & OS Detection
+$os = Get-CimInstance Win32_OperatingSystem
+$osName = $os.Caption -replace "Microsoft ", ""
+$cpu = (Get-CimInstance Win32_Processor).Name.Trim()
+$gpuList = Get-CimInstance Win32_VideoController
+$gpuMain = $gpuList | Select-Object -First 1
+$gpuName = $gpuMain.Name.Trim()
+
+$totalRamBytes = (Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory
+$ramGB = [math]::Round($totalRamBytes / 1GB)
+
+# Multi-GPU Brands Check
+$hasNvidia = $false; $hasAMD = $false; $hasIntel = $false
+foreach ($g in $gpuList) {
+    if ($g.Name -match "NVIDIA") { $hasNvidia = $true }
+    if ($g.Name -match "AMD" -or $g.Name -match "Radeon") { $hasAMD = $true }
+    if ($g.Name -match "Intel") { $hasIntel = $true }
+}
+
+$gpuBrandTag = "UNKNOWN"
+if ($hasNvidia) { $gpuBrandTag = "NVIDIA" }
+elseif ($hasAMD) { $gpuBrandTag = "AMD" }
+elseif ($hasIntel) { $gpuBrandTag = "INTEL" }
+
+# Print Specs
+Write-Host "- PC Specs :" -ForegroundColor Yellow
+Write-Host -NoNewline "  [" -ForegroundColor White
+Write-Host -NoNewline "CPU" -ForegroundColor Cyan
+Write-Host -NoNewline "] : " -ForegroundColor White
+Write-Host "$cpu" -ForegroundColor Green
+
+Write-Host -NoNewline "  [" -ForegroundColor White
+Write-Host -NoNewline "GPU" -ForegroundColor Cyan
+Write-Host -NoNewline "] : " -ForegroundColor White
+Write-Host "$gpuName ($gpuBrandTag)" -ForegroundColor Green
+
+Write-Host -NoNewline "  [" -ForegroundColor White
+Write-Host -NoNewline "RAM" -ForegroundColor Cyan
+Write-Host -NoNewline "] : " -ForegroundColor White
+Write-Host "$ramGB GB" -ForegroundColor Green
+
+Write-Host -NoNewline "  [" -ForegroundColor White
+Write-Host -NoNewline "OS " -ForegroundColor Cyan
+Write-Host -NoNewline "] : " -ForegroundColor White
+Write-Host "$osName" -ForegroundColor Green
+
+Write-Host ""
+
+Write-Host "/--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--\" -ForegroundColor DarkGray
+Write-Host "Reverting All Tweaks to Windows Default. . ." -ForegroundColor Yellow
+
+# Helper function for rendering progress bar
+function Show-Progress {
+    param ([int]$percent)
+    $totalBlocks = 32
+    $fillCount = [math]::Floor(($percent / 100) * $totalBlocks)
+    $emptyCount = $totalBlocks - $fillCount
+    $bar = "#" * $fillCount + " " * $emptyCount
+    $padPercent = "{0,3}" -f $percent
+    Write-Host -NoNewline "`r[$bar] $padPercent%" -ForegroundColor Yellow
+}
+
+# List of Master Revert Tasks
+$tasks = @(
+    # Task 1: Restore Balanced Power Scheme
+    {
+        $balancedGuid = "381b4222-f694-41f0-9685-ff5bb260df2e"
+        powercfg -setactive $balancedGuid 2>$null | Out-Null
+    },
+    # Task 2: Restore Power Settings Attributes & EPP
+    {
+        $ppPath = "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318583"
+        reg delete "$ppPath" /v ValueMin /f 2>$null | Out-Null
+        reg delete "$ppPath" /v ValueMax /f 2>$null | Out-Null
+
+        $eppPath = "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\3b0458f5-100f-4f29-b357-225fda4a7802"
+        reg add "$eppPath" /v Attributes /t REG_DWORD /d 1 /f 2>$null | Out-Null
+    },
+    # Task 3: Restore Priority Control Defaults
+    {
+        reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v ConvertibleSlateMode /t REG_DWORD /d 1 /f 2>$null | Out-Null
+        reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v Win32PrioritySeparation /t REG_DWORD /d 2 /f 2>$null | Out-Null
+        reg delete "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v AutoGroupAffinity /f 2>$null | Out-Null
+        reg delete "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v ThreadQuantum /f 2>$null | Out-Null
+    },
+    # Task 4: Re-enable GameDVR, GameBar & FSO Defaults
+    {
+        reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\GameDVR" /v AppCaptureEnabled /t REG_DWORD /d 1 /f 2>$null | Out-Null
+        reg add "HKCU\Software\Microsoft\GameBar" /v ShowGameBar /t REG_DWORD /d 1 /f 2>$null | Out-Null
+        reg add "HKCU\System\GameConfigStore" /v GameDVR_FSEBehavior /t REG_DWORD /d 0 /f 2>$null | Out-Null
+        reg add "HKCU\System\GameConfigStore" /v GameDVR_FSEBehaviorMode /t REG_DWORD /d 0 /f 2>$null | Out-Null
+        reg add "HKCU\System\GameConfigStore" /v GameDVR_HonorUserFSEBehaviorMode /t REG_DWORD /d 0 /f 2>$null | Out-Null
+        reg add "HKCU\System\GameConfigStore" /v GameDVR_DXGIHonorFSEWindowsCompatible /t REG_DWORD /d 0 /f 2>$null | Out-Null
+        reg add "HKCU\System\GameConfigStore" /v GameDVR_EFSEFeatureFlags /t REG_DWORD /d 0 /f 2>$null | Out-Null
+    },
+    # Task 5: Restore HAGS to Default (Disabled/Unset)
+    {
+        reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v HwSchMode /t REG_DWORD /d 1 /f 2>$null | Out-Null
+    },
+    # Task 6: Enable Hibernation
+    {
+        powercfg -h on 2>$null | Out-Null
+        reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v HibernateEnabled /t REG_DWORD /d 1 /f 2>$null | Out-Null
+    },
+    # Task 7: Restore Pagefile & Memory Management Defaults
+    {
+        try {
+            $cs = Get-WmiObject -Class Win32_ComputerSystem -ErrorAction SilentlyContinue
+            if ($cs) { $cs.AutomaticManagedPagefile = $true; $cs.Put() | Out-Null }
+        } catch {}
+
+        reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v DisablePagingExecutive /t REG_DWORD /d 0 /f 2>$null | Out-Null
+        reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v MemoryManagementTracing /f 2>$null | Out-Null
+        Enable-MMAgent -MemoryCompression -ErrorAction SilentlyContinue
+        Enable-MMAgent -ApplicationPreLaunch -ErrorAction SilentlyContinue
+    },
+    # Task 8: Restore Visual Effects Defaults
+    {
+        reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 0 /f 2>$null | Out-Null
+        reg add "HKCU\Control Panel\Desktop" /v DragFullWindows /t REG_SZ /d 1 /f 2>$null | Out-Null
+        reg add "HKCU\Control Panel\Desktop" /v MenuShowDelay /t REG_SZ /d 400 /f 2>$null | Out-Null
+        reg add "HKCU\Control Panel\Desktop\WindowMetrics" /v MinAnimate /t REG_SZ /d 1 /f 2>$null | Out-Null
+        reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarAnimations /t REG_DWORD /d 1 /f 2>$null | Out-Null
+    },
+    # Task 9: Restore Network TCP & Adapter Defaults
+    {
+        netsh int tcp set global autotuninglevel=normal 2>$null | Out-Null
+        netsh int tcp set global chimney=default 2>$null | Out-Null
+        netsh int tcp set global ecncapability=default 2>$null | Out-Null
+        netsh int tcp set global timestamps=default 2>$null | Out-Null
+        netsh int tcp set global rss=default 2>$null | Out-Null
+        netsh int tcp set global rsc=default 2>$null | Out-Null
+
+        $adapters = Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq "Up" }
+        foreach ($a in $adapters) {
+            $name = $a.Name
+            try {
+                Set-NetAdapterAdvancedProperty -Name $name -DisplayName "Energy Efficient Ethernet" -DisplayValue "Enabled" -ErrorAction SilentlyContinue
+                Set-NetAdapterAdvancedProperty -Name $name -DisplayName "Green Ethernet" -DisplayValue "Enabled" -ErrorAction SilentlyContinue
+                Set-NetAdapterAdvancedProperty -Name $name -DisplayName "Interrupt Moderation" -DisplayValue "Enabled" -ErrorAction SilentlyContinue
+                Reset-NetAdapterAdvancedProperty -Name $name -DisplayName "Receive Buffers" -ErrorAction SilentlyContinue
+                Reset-NetAdapterAdvancedProperty -Name $name -DisplayName "Transmit Buffers" -ErrorAction SilentlyContinue
+            } catch {}
+        }
+
+        $ifaces = Get-ChildItem "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces" -ErrorAction SilentlyContinue
+        foreach ($iface in $ifaces) {
+            $rp = "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\$($iface.PSChildName)"
+            reg delete "$rp" /v TcpNoDelay /f 2>$null | Out-Null
+            reg delete "$rp" /v TcpDelAckTicks /f 2>$null | Out-Null
+            reg delete "$rp" /v TcpAckFrequency /f 2>$null | Out-Null
+        }
+
+        Enable-NetAdapterLso -Name * -ErrorAction SilentlyContinue
+        Enable-NetAdapterChecksumOffload -Name * -ErrorAction SilentlyContinue
+    },
+    # Task 10: Restore Network Throttling & MMCSS Defaults
+    {
+        reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 10 /f 2>$null | Out-Null
+        reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v NonBestEffortLimit /f 2>$null | Out-Null
+        reg delete "HKLM\SOFTWARE\Microsoft\MSMQ\Parameters" /v TCPNoDelay /f 2>$null | Out-Null
+        reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v MaxPriority /f 2>$null | Out-Null
+        reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NoLazyMode /f 2>$null | Out-Null
+        reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v AlwaysOn /f 2>$null | Out-Null
+    },
+    # Task 11: Restore IRQ & Network MSI Defaults
+    {
+        reg delete "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v IRQ8Priority /f 2>$null | Out-Null
+        $netDevs = Get-WmiObject Win32_PnPEntity -ErrorAction SilentlyContinue | Where-Object { $_.Name -match "Ethernet|Wi-Fi|Wireless|Network" -and $_.DeviceID -match "PCI" }
+        foreach ($dev in $netDevs) {
+            try {
+                $devPath = "HKLM\SYSTEM\CurrentControlSet\Enum\$($dev.DeviceID)\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties"
+                $affinityPath = "HKLM\SYSTEM\CurrentControlSet\Enum\$($dev.DeviceID)\Device Parameters\Interrupt Management\Affinity Policy"
+                reg delete "$devPath" /v MSISupported /f 2>$null | Out-Null
+                reg delete "$affinityPath" /v DevicePriority /f 2>$null | Out-Null
+            } catch {}
+        }
+    },
+    # Task 12: Restore System Responsiveness & Games Task Scheduler
+    {
+        reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d 14 /f 2>$null | Out-Null
+        reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "GPU Priority" /t REG_DWORD /d 8 /f 2>$null | Out-Null
+        reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v Priority /t REG_DWORD /d 2 /f 2>$null | Out-Null
+        reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Scheduling Category" /t REG_SZ /d Medium /f 2>$null | Out-Null
+        reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "SFIO Priority" /t REG_SZ /d Normal /f 2>$null | Out-Null
+        reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Background Only" /t REG_SZ /d True /f 2>$null | Out-Null
+    },
+    # Task 13: Restore Mouse, BCDedit & DirectX Queue Defaults
+    {
+        reg add "HKCU\Control Panel\Mouse" /v MouseSpeed /t REG_SZ /d 1 /f 2>$null | Out-Null
+        reg add "HKCU\Control Panel\Mouse" /v MouseThreshold1 /t REG_SZ /d 6 /f 2>$null | Out-Null
+        reg add "HKCU\Control Panel\Mouse" /v MouseThreshold2 /t REG_SZ /d 10 /f 2>$null | Out-Null
+        reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v TdrDelay /t REG_DWORD /d 2 /f 2>$null | Out-Null
+
+        bcdedit /deletevalue disabledynamictick 2>$null | Out-Null
+        bcdedit /deletevalue useplatformclock 2>$null | Out-Null
+
+        reg delete "HKLM\SOFTWARE\Microsoft\DirectX" /v MaxFrameQueueSize /f 2>$null | Out-Null
+        reg delete "HKLM\SOFTWARE\Microsoft\Direct3D" /v MaxPreRenderedFrames /f 2>$null | Out-Null
+    },
+    # Task 14: Restore Vendor Specific GPU Tweaks
+    {
+        if ($hasNvidia) {
+            $nvPath = "HKLM\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\NVTweak"
+            reg delete "$nvPath" /v PowerMizerEnable /f 2>$null | Out-Null
+            reg delete "$nvPath" /v PowerMizerLevel /f 2>$null | Out-Null
+            reg delete "$nvPath" /v PowerMizerLevelAC /f 2>$null | Out-Null
+            reg delete "$nvPath" /v UllModeEnabled /f 2>$null | Out-Null
+            reg delete "$nvPath" /v UllModeLevel /f 2>$null | Out-Null
+        }
+        if ($hasAMD) {
+            reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v KMD_EnableComputePreemption /f 2>$null | Out-Null
+        }
+    },
+    # Task 15: Remove High Priority Overrides (IFEO)
+    {
+        $ifeoBase = "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options"
+        foreach ($exe in @("FiveM.exe","GTA5.exe","FiveM_GTAProcess.exe","FiveM_b3258_GTAProcess.exe","Valorant.exe","VALORANT-Win64-Shipping.exe")) {
+            reg delete "$ifeoBase\$exe\PerfOptions" /f 2>$null | Out-Null
+        }
+    },
+    # Task 16: Restore Specter/Meltdown & Timer Resolution Defaults
+    {
+        reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettingsOverride /f 2>$null | Out-Null
+        reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettingsOverrideMask /f 2>$null | Out-Null
+        reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v GlobalTimerResolutionRequests /f 2>$null | Out-Null
+        reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v DistributeTimers /f 2>$null | Out-Null
+    },
+    # Task 17: Restore Services & Telemetry Defaults
+    {
+        foreach ($svc in @("DiagTrack","MapsBroker","CDPSvc","WSearch","XblAuthManager","XblGameSave","XboxNetApiSvc","XboxGipSvc")) {
+            Set-Service $svc -StartupType Automatic -ErrorAction SilentlyContinue
+            Start-Service $svc -ErrorAction SilentlyContinue
+        }
+
+        reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v AllowTelemetry /f 2>$null | Out-Null
+        reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v DoNotShowFeedbackNotifications /f 2>$null | Out-Null
+        reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\ScriptedDiagnostics" /v EnableDiagnostics /f 2>$null | Out-Null
+        reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" /v GlobalUserDisabled /f 2>$null | Out-Null
+        reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\I/O System" /v CountOperations /f 2>$null | Out-Null
+    },
+    # Task 18: Restore GPU MSI Mode Defaults
+    {
+        $gpus = Get-WmiObject Win32_PnPEntity -ErrorAction SilentlyContinue | Where-Object { $_.PNPClass -eq "Display" -and $_.DeviceID -match "PCI" }
+        foreach ($dev in $gpus) {
+            try {
+                $devPath = "HKLM\SYSTEM\CurrentControlSet\Enum\$($dev.DeviceID)\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties"
+                $affinityPath = "HKLM\SYSTEM\CurrentControlSet\Enum\$($dev.DeviceID)\Device Parameters\Interrupt Management\Affinity Policy"
+                reg delete "$devPath" /v MSISupported /f 2>$null | Out-Null
+                reg delete "$affinityPath" /v DevicePriority /f 2>$null | Out-Null
+            } catch {}
+        }
+    }
+)
+
+# Run Tasks and update loading bar
+Show-Progress -percent 0
+for ($i = 0; $i -lt $tasks.Count; $i++) {
+    & $tasks[$i]
+    $pct = [math]::Floor((($i + 1) / $tasks.Count) * 100)
+    Show-Progress -percent $pct
+    Start-Sleep -Milliseconds 50
+}
+
+Write-Host ""
+Write-Host ""
+
+# Completion Message
+$msg = "[+] Successfully Reverted All Tweaks. Please Restart PC."
+for ($f = 0; $f -lt 6; $f++) {
+    Write-Host -NoNewline "`r$msg" -ForegroundColor Yellow
+    Start-Sleep -Milliseconds 350
+    Write-Host -NoNewline "`r                                                       "
+    Start-Sleep -Milliseconds 250
+}
+Write-Host "`r$msg" -ForegroundColor Yellow
+
+Write-Host ""
+Write-Host "/--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--\" -ForegroundColor DarkGray
+Write-Host ""
