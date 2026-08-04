@@ -26,7 +26,7 @@ $gpuMain = $gpuList | Select-Object -First 1
 $gpuName = $gpuMain.Name.Trim()
 
 $totalRamBytes = (Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory
-$ramGB = [math]::Round($totalRamBytes / 1GB)
+$global:ramGB = [math]::Round($totalRamBytes / 1GB)
 
 # Multi-GPU Brands Check
 $hasNvidia = $false; $hasAMD = $false; $hasIntel = $false
@@ -56,7 +56,7 @@ Write-Host "$gpuName ($gpuBrandTag)" -ForegroundColor Green
 Write-Host -NoNewline "  [" -ForegroundColor White
 Write-Host -NoNewline "RAM" -ForegroundColor Cyan
 Write-Host -NoNewline "] : " -ForegroundColor White
-Write-Host "$ramGB GB" -ForegroundColor Green
+Write-Host "$global:ramGB GB" -ForegroundColor Green
 
 Write-Host -NoNewline "  [" -ForegroundColor White
 Write-Host -NoNewline "OS " -ForegroundColor Cyan
@@ -94,7 +94,7 @@ if ($global:FiveMFound) {
 Write-Host ""
 Write-Host "/--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--\" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "Jamevbvb Already Tweaking. . ." -ForegroundColor Yellow
+Write-Host "Applying Jamevbvb Tweaks. . ." -ForegroundColor Yellow
 
 # Helper function for rendering progress bar
 function Show-Progress {
@@ -222,31 +222,42 @@ $tasks = @(
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Scheduling Category" /t REG_SZ /d High /f 2>$null | Out-Null
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "SFIO Priority" /t REG_SZ /d High /f 2>$null | Out-Null
     },
-    # Task 11: Vendor GPU Performance Tweaks (NVIDIA & AMD)
+    # Task 11: Vendor GPU Performance Tweaks (NVIDIA P0-State, Preemption Disable & AMD)
     {
         if ($hasNvidia) {
+            # PowerMizer Full Performance & Disable Dynamic P-State (Force P0 State)
             $nvPath = "HKLM\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\NVTweak"
             reg add "$nvPath" /v PowerMizerEnable /t REG_DWORD /d 1 /f 2>$null | Out-Null
             reg add "$nvPath" /v PowerMizerLevel /t REG_DWORD /d 1 /f 2>$null | Out-Null
             reg add "$nvPath" /v PowerMizerLevelAC /t REG_DWORD /d 1 /f 2>$null | Out-Null
+            reg add "$nvPath" /v DisableDynamicPState /t REG_DWORD /d 1 /f 2>$null | Out-Null
+
+            # Disable NVIDIA Compute & Graphics Preemption (Lower Latency)
+            $nvClass = "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000"
+            reg add "$nvClass" /v DisablePreemption /t REG_DWORD /d 1 /f 2>$null | Out-Null
+            reg add "$nvClass" /v EnableComputePreemption /t REG_DWORD /d 0 /f 2>$null | Out-Null
         }
         if ($hasAMD) {
             reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v KMD_EnableComputePreemption /t REG_DWORD /d 0 /f 2>$null | Out-Null
         }
     },
-    # Task 12: Mouse Speed Fix (No Acceleration)
+    # Task 12: Mouse Speed Fix & TDR Tweaks (No Acceleration + TdrLevel = 1)
     {
         reg add "HKCU\Control Panel\Mouse" /v MouseSpeed /t REG_SZ /d 0 /f 2>$null | Out-Null
         reg add "HKCU\Control Panel\Mouse" /v MouseThreshold1 /t REG_SZ /d 0 /f 2>$null | Out-Null
         reg add "HKCU\Control Panel\Mouse" /v MouseThreshold2 /t REG_SZ /d 0 /f 2>$null | Out-Null
-        reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v TdrDelay /t REG_DWORD /d 10 /f 2>$null | Out-Null
+        
+        # GPU TDR Delay & Level Control
+        $gfxPath = "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers"
+        reg add "$gfxPath" /v TdrDelay /t REG_DWORD /d 10 /f 2>$null | Out-Null
+        reg add "$gfxPath" /v TdrLevel /t REG_DWORD /d 1 /f 2>$null | Out-Null
     },
-    # Task 13: High Priority Enforcement (CpuPriorityClass = 3)
+    # Task 13: Optimized Process Priority (Above Normal = 6 for Maximum Stability)
     {
         $ifeoBase = "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options"
         foreach ($exe in @("FiveM.exe","GTA5.exe","FiveM_GTAProcess.exe","FiveM_b3258_GTAProcess.exe","Valorant.exe","VALORANT-Win64-Shipping.exe")) {
-            reg add "$ifeoBase\$exe\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f 2>$null | Out-Null
-            reg add "$ifeoBase\$exe\PerfOptions" /v IoPriority /t REG_DWORD /d 3 /f 2>$null | Out-Null
+            reg add "$ifeoBase\$exe\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 6 /f 2>$null | Out-Null
+            reg add "$ifeoBase\$exe\PerfOptions" /v IoPriority /t REG_DWORD /d 2 /f 2>$null | Out-Null
         }
     },
     # Task 14: Complete Shader Cache & FiveM Junk Purge
@@ -260,7 +271,7 @@ $tasks = @(
             if (Test-Path $p) { Get-ChildItem -Path $p -Recurse -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue }
         }
     },
-    # Task 15: Disable Telemetry & Non-Essential Xbox Services (WSearch Remains Active)
+    # Task 15: Disable Telemetry & Non-Essential Xbox Services
     {
         foreach ($svc in @("DiagTrack","MapsBroker","XblAuthManager","XblGameSave","XboxNetApiSvc","XboxGipSvc")) {
             Set-Service $svc -StartupType Disabled -ErrorAction SilentlyContinue
@@ -282,6 +293,24 @@ $tasks = @(
                 reg add "$affinityPath" /v DevicePriority /t REG_DWORD /d 3 /f 2>$null | Out-Null
             } catch {}
         }
+    },
+    # Task 17: Memory Management & Paging Executive Check (Only DisablePagingExecutive requires RAM >= 16GB)
+    {
+        $memPath = "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"
+        reg add "$memPath" /v LargeSystemCache /t REG_DWORD /d 1 /f 2>$null | Out-Null
+        
+        if ($global:ramGB -ge 16) {
+            reg add "$memPath" /v DisablePagingExecutive /t REG_DWORD /d 1 /f 2>$null | Out-Null
+        }
+    },
+    # Task 18: BCDedit Latency & Input Lag Tweaks
+    {
+        bcdedit /set disabledynamictick yes 2>$null | Out-Null
+        bcdedit /set useplatformclock no 2>$null | Out-Null
+    },
+    # Task 19: Delivery Optimization Cache Cleanup
+    {
+        Remove-Item "C:\Windows\SoftwareDistribution\Download\*" -Recurse -Force -ErrorAction SilentlyContinue
     }
 )
 
