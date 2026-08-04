@@ -12,7 +12,7 @@ Clear-Host
 # 1. Header Display
 Write-Host "+-------------------------------------------------------+" -ForegroundColor Cyan
 Write-Host "|                                                       |" -ForegroundColor Cyan
-Write-Host "|                   JAME VBVB TWEAKS                    |" -ForegroundColor Yellow
+Write-Host "|                    JAME VBVB TWEAKS                   |" -ForegroundColor Yellow
 Write-Host "|                                                       |" -ForegroundColor Cyan
 Write-Host "+-------------------------------------------------------+" -ForegroundColor Cyan
 Write-Host ""
@@ -93,7 +93,8 @@ if ($global:FiveMFound) {
 
 Write-Host ""
 Write-Host "/--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--\" -ForegroundColor DarkGray
-Write-Host "Applying High Performance FPS Tweaks. . ." -ForegroundColor Yellow
+Write-Host ""
+Write-Host "Applying Jamevbvb Tweaks. . ." -ForegroundColor Yellow
 
 # Helper function for rendering progress bar
 function Show-Progress {
@@ -121,7 +122,7 @@ $tasks = @(
             $global:IsUltimateActive = $false
         }
     },
-    # Task 2: CPU Unpark & EPP Off (Applies ONLY if Ultimate Performance is active)
+    # Task 2: CPU Unpark & EPP Off
     {
         if ($global:IsUltimateActive) {
             $currentScheme = "e9a42b02-d5df-448d-aa00-03f14749eb61"
@@ -160,10 +161,12 @@ $tasks = @(
     {
         reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v HwSchMode /t REG_DWORD /d 2 /f 2>$null | Out-Null
     },
-    # Task 6: Disable Hibernation & Energy Saving
+    # Task 6: Disable Hibernation, Fast Startup & Hard Disk Timeout
     {
         powercfg -h off 2>$null | Out-Null
+        powercfg -change -disk-timeout-ac 0 2>$null | Out-Null
         reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v HibernateEnabled /t REG_DWORD /d 0 /f 2>$null | Out-Null
+        reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v HiberbootEnabled /t REG_DWORD /d 0 /f 2>$null | Out-Null
     },
     # Task 7: Temp & Garbage Cleanup
     {
@@ -174,7 +177,7 @@ $tasks = @(
     {
         reg add "HKCU\Control Panel\Desktop" /v MenuShowDelay /t REG_SZ /d 0 /f 2>$null | Out-Null
     },
-    # Task 9: Network Lag, Latency & Throttling Tweaks
+    # Task 9: Network Lag, Latency, Nagle's Algorithm & Throttling Tweaks
     {
         netsh int tcp set global autotuninglevel=high 2>$null | Out-Null
         netsh int tcp set global chimney=disabled 2>$null | Out-Null
@@ -204,7 +207,6 @@ $tasks = @(
             reg add "$rp" /v TcpAckFrequency /t REG_DWORD /d 1 /f 2>$null | Out-Null
         }
 
-        # Network Throttling & QoS Bandwidth Tweaks
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 4294967295 /f 2>$null | Out-Null
         reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v NonBestEffortLimit /t REG_DWORD /d 0 /f 2>$null | Out-Null
 
@@ -215,51 +217,57 @@ $tasks = @(
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d 0 /f 2>$null | Out-Null
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NoLazyMode /t REG_DWORD /d 1 /f 2>$null | Out-Null
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v AlwaysOn /t REG_DWORD /d 1 /f 2>$null | Out-Null
-        
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "GPU Priority" /t REG_DWORD /d 8 /f 2>$null | Out-Null
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v Priority /t REG_DWORD /d 6 /f 2>$null | Out-Null
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Scheduling Category" /t REG_SZ /d High /f 2>$null | Out-Null
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "SFIO Priority" /t REG_SZ /d High /f 2>$null | Out-Null
     },
-    # Task 11: Vendor GPU Performance Tweaks (NVIDIA P0-State, Preemption Disable & AMD)
+    # Task 11: GPU Driver Tweaks (NVIDIA P0-State, Low Latency, Preemption & AMD)
     {
         if ($hasNvidia) {
-            # PowerMizer Full Performance & Disable Dynamic P-State (Force P0 State)
             $nvPath = "HKLM\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\NVTweak"
             reg add "$nvPath" /v PowerMizerEnable /t REG_DWORD /d 1 /f 2>$null | Out-Null
             reg add "$nvPath" /v PowerMizerLevel /t REG_DWORD /d 1 /f 2>$null | Out-Null
             reg add "$nvPath" /v PowerMizerLevelAC /t REG_DWORD /d 1 /f 2>$null | Out-Null
             reg add "$nvPath" /v DisableDynamicPState /t REG_DWORD /d 1 /f 2>$null | Out-Null
 
-            # Disable NVIDIA Compute & Graphics Preemption (Lower Latency)
+            $nvFtsPath = "HKLM\SYSTEM\CurrentControlSet\Services\nvlddmkm\FTS"
+            reg add "$nvFtsPath" /v EnableGR535 /t REG_DWORD /d 0 /f 2>$null | Out-Null
+
             $nvClass = "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000"
             reg add "$nvClass" /v DisablePreemption /t REG_DWORD /d 1 /f 2>$null | Out-Null
             reg add "$nvClass" /v EnableComputePreemption /t REG_DWORD /d 0 /f 2>$null | Out-Null
+            reg add "$nvClass" /v CudaSysmemFallbackPolicy /t REG_DWORD /d 1 /f 2>$null | Out-Null
+
+            $nvPolicyPath = "HKLM\SOFTWARE\NVIDIA Corporation\Global\NVTweak"
+            reg add "$nvPolicyPath" /v "0x00000001" /t REG_DWORD /d 1 /f 2>$null | Out-Null
+            reg add "$nvPolicyPath" /v "LowLatencyMode" /t REG_DWORD /d 1 /f 2>$null | Out-Null
+            reg add "$nvPolicyPath" /v "VSyncMode" /t REG_DWORD /d 0 /f 2>$null | Out-Null
+            reg add "$nvPolicyPath" /v "TextureFilteringQuality" /t REG_DWORD /d 2 /f 2>$null | Out-Null
         }
         if ($hasAMD) {
             reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v KMD_EnableComputePreemption /t REG_DWORD /d 0 /f 2>$null | Out-Null
         }
     },
-    # Task 12: Mouse Speed Fix & TDR Tweaks (No Acceleration + TdrLevel = 1)
+    # Task 12: Mouse Speed Fix & TDR Tweaks
     {
         reg add "HKCU\Control Panel\Mouse" /v MouseSpeed /t REG_SZ /d 0 /f 2>$null | Out-Null
         reg add "HKCU\Control Panel\Mouse" /v MouseThreshold1 /t REG_SZ /d 0 /f 2>$null | Out-Null
         reg add "HKCU\Control Panel\Mouse" /v MouseThreshold2 /t REG_SZ /d 0 /f 2>$null | Out-Null
         
-        # GPU TDR Delay & Level Control
         $gfxPath = "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers"
         reg add "$gfxPath" /v TdrDelay /t REG_DWORD /d 10 /f 2>$null | Out-Null
         reg add "$gfxPath" /v TdrLevel /t REG_DWORD /d 1 /f 2>$null | Out-Null
     },
-    # Task 13: Optimized Process Priority (Above Normal = 6 for Maximum Stability)
+    # Task 13: Optimized Process Priority (Above Normal = 6)
     {
         $ifeoBase = "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options"
-        foreach ($exe in @("FiveM.exe","GTA5.exe","FiveM_GTAProcess.exe","FiveM_b3258_GTAProcess.exe","Valorant.exe","VALORANT-Win64-Shipping.exe")) {
+        foreach ($exe in @("FiveM.exe","GTA5.exe","FiveM_GTAProcess.exe","FiveM_b3258_GTAProcess.exe")) {
             reg add "$ifeoBase\$exe\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 6 /f 2>$null | Out-Null
             reg add "$ifeoBase\$exe\PerfOptions" /v IoPriority /t REG_DWORD /d 2 /f 2>$null | Out-Null
         }
     },
-    # Task 14: Complete Shader Cache & FiveM Junk Purge
+    # Task 14: Shader Cache & FiveM Junk Purge
     {
         if ($global:FiveMFound) {
             foreach ($cp in @("$env:LOCALAPPDATA\FiveM\FiveM.app\data\cache","$env:LOCALAPPDATA\FiveM\FiveM.app\logs")) {
@@ -270,16 +278,16 @@ $tasks = @(
             if (Test-Path $p) { Get-ChildItem -Path $p -Recurse -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue }
         }
     },
-    # Task 15: Disable Telemetry & Non-Essential Xbox Services
+    # Task 15: Disable Telemetry & Xbox Background Services
     {
         foreach ($svc in @("DiagTrack","MapsBroker","XblAuthManager","XblGameSave","XboxNetApiSvc","XboxGipSvc")) {
             Set-Service $svc -StartupType Disabled -ErrorAction SilentlyContinue
             Stop-Service $svc -Force -ErrorAction SilentlyContinue
         }
-
         reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v AllowTelemetry /t REG_DWORD /d 0 /f 2>$null | Out-Null
         reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v DoNotShowFeedbackNotifications /t REG_DWORD /d 1 /f 2>$null | Out-Null
         reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\ScriptedDiagnostics" /v EnableDiagnostics /t REG_DWORD /d 0 /f 2>$null | Out-Null
+        reg add "HKLM\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter" /v ActivationType /t REG_DWORD /d 0 /f 2>$null | Out-Null
     },
     # Task 16: GPU MSI Mode Enforcement
     {
@@ -293,7 +301,7 @@ $tasks = @(
             } catch {}
         }
     },
-    # Task 17: Memory Management & Paging Executive Check
+    # Task 17: Memory Management & Disable Memory Compression
     {
         $memPath = "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"
         reg add "$memPath" /v LargeSystemCache /t REG_DWORD /d 1 /f 2>$null | Out-Null
@@ -301,6 +309,7 @@ $tasks = @(
         if ($global:ramGB -ge 16) {
             reg add "$memPath" /v DisablePagingExecutive /t REG_DWORD /d 1 /f 2>$null | Out-Null
         }
+        Disable-MMAgent -MemoryCompression 2>$null | Out-Null
     },
     # Task 18: BCDedit Latency & Input Lag Tweaks
     {
@@ -323,43 +332,34 @@ $tasks = @(
         reg add "HKCU\Control Panel\Desktop\WindowMetrics" /v MinAnimate /t REG_SZ /d 0 /f 2>$null | Out-Null
         reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v EnableTransparency /t REG_DWORD /d 0 /f 2>$null | Out-Null
     },
-    # Task 21: NVIDIA Control Panel Global Settings Optimization
-    {
-        if ($hasNvidia) {
-            $nvGlobalPath = "HKLM\SYSTEM\CurrentControlSet\Services\nvlddmkm\FTS"
-            reg add "$nvGlobalPath" /v EnableGR535 /t REG_DWORD /d 0 /f 2>$null | Out-Null
-            
-            $nvPolicyPath = "HKLM\SOFTWARE\NVIDIA Corporation\Global\NVTweak"
-            reg add "$nvPolicyPath" /v "0x00000001" /t REG_DWORD /d 1 /f 2>$null | Out-Null
-            reg add "$nvPolicyPath" /v "LowLatencyMode" /t REG_DWORD /d 1 /f 2>$null | Out-Null
-            reg add "$nvPolicyPath" /v "VSyncMode" /t REG_DWORD /d 0 /f 2>$null | Out-Null
-            reg add "$nvPolicyPath" /v "TextureFilteringQuality" /t REG_DWORD /d 2 /f 2>$null | Out-Null
-            
-            $nvClass = "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000"
-            reg add "$nvClass" /v CudaSysmemFallbackPolicy /t REG_DWORD /d 1 /f 2>$null | Out-Null
-        }
-    },
-    # Task 22: Disable Memory Compression & GameBar Background Processes
-    {
-        Disable-MMAgent -MemoryCompression 2>$null | Out-Null
-        reg add "HKLM\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter" /v ActivationType /t REG_DWORD /d 0 /f 2>$null | Out-Null
-    },
-    # Task 23: Disable Hard Disk Timeout & Fast Startup Issues
-    {
-        powercfg -change -disk-timeout-ac 0 2>$null | Out-Null
-        reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v HiberbootEnabled /t REG_DWORD /d 0 /f 2>$null | Out-Null
-    },
-    # Task 24: USB Power Saving Disable
+    # Task 21: USB Power Saving Disable
     {
         powercfg -setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e282b3-a540-4cb1-977f-0f4ed4601257 0 2>$null | Out-Null
         powercfg -setactive SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 2>$null | Out-Null
     },
-    # Task 25: Disable NetBIOS over TCP/IP
+    # Task 22: Disable NetBIOS over TCP/IP
     {
         $regPath = "HKLM:\SYSTEM\CurrentControlSet\Services\NetBT\Parameters\Interfaces"
         Get-ChildItem $regPath -ErrorAction SilentlyContinue | ForEach-Object {
             Set-ItemProperty -Path $_.PSPath -Name NetbiosOptions -Value 2 -ErrorAction SilentlyContinue
         }
+    },
+    # Task 23: Disable Power Throttling & AutoLoggers Background Overhead
+    {
+        reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" /v PowerThrottlingOff /t REG_DWORD /d 1 /f 2>$null | Out-Null
+        
+        $loggers = @("AutoLogger-Diagtrack-Listener", "SQMLogger", "Circular Kernel Context Logger")
+        foreach ($logger in $loggers) {
+            reg add "HKLM\SYSTEM\CurrentControlSet\Control\WMI\AutoLogger\$logger" /v Start /t REG_DWORD /d 0 /f 2>$null | Out-Null
+        }
+    },
+    # Task 24: Direct3D Low Pre-Rendered Frames (Reduces Render Queue Latency)
+    {
+        reg add "HKLM\SOFTWARE\Microsoft\Direct3D" /v MaxPreRenderedFrames /t REG_DWORD /d 1 /f 2>$null | Out-Null
+    },
+    # Task 25: Disable Automatic Maintenance Background Tasks
+    {
+        reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance" /v MaintenanceDisabled /t REG_DWORD /d 1 /f 2>$null | Out-Null
     }
 )
 
@@ -376,7 +376,7 @@ Write-Host ""
 Write-Host ""
 
 # Completion Message
-$msg = "[+] Successfully Applied Tweaks. Please Restart PC."
+$msg = "[+] Successfully Applied Tweaks - Please Restart PC !!!"
 for ($f = 0; $f -lt 6; $f++) {
     Write-Host -NoNewline "`r$msg" -ForegroundColor Green
     Start-Sleep -Milliseconds 350
