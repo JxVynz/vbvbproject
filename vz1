@@ -93,8 +93,7 @@ if ($global:FiveMFound) {
 
 Write-Host ""
 Write-Host "/--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--\" -ForegroundColor DarkGray
-Write-Host ""
-Write-Host "Applying Jamevbvb Tweaks. . ." -ForegroundColor Yellow
+Write-Host "Applying High Performance FPS Tweaks. . ." -ForegroundColor Yellow
 
 # Helper function for rendering progress bar
 function Show-Progress {
@@ -140,10 +139,10 @@ $tasks = @(
             powercfg -setactive $currentScheme 2>$null | Out-Null
         }
     },
-    # Task 3: Priority Control, Win32Separation & IRQ Priority
+    # Task 3: Max FPS Priority Control (Win32Separation = 40 / Hex 28)
     {
         reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v ConvertibleSlateMode /t REG_DWORD /d 0 /f 2>$null | Out-Null
-        reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v Win32PrioritySeparation /t REG_DWORD /d 38 /f 2>$null | Out-Null
+        reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v Win32PrioritySeparation /t REG_DWORD /d 40 /f 2>$null | Out-Null
         reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v AutoGroupAffinity /t REG_DWORD /d 0 /f 2>$null | Out-Null
         reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v IRQ8Priority /t REG_DWORD /d 1 /f 2>$null | Out-Null
     },
@@ -294,7 +293,7 @@ $tasks = @(
             } catch {}
         }
     },
-    # Task 17: Memory Management & Paging Executive Check (Only DisablePagingExecutive requires RAM >= 16GB)
+    # Task 17: Memory Management & Paging Executive Check
     {
         $memPath = "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management"
         reg add "$memPath" /v LargeSystemCache /t REG_DWORD /d 1 /f 2>$null | Out-Null
@@ -311,6 +310,56 @@ $tasks = @(
     # Task 19: Delivery Optimization Cache Cleanup
     {
         Remove-Item "C:\Windows\SoftwareDistribution\Download\*" -Recurse -Force -ErrorAction SilentlyContinue
+    },
+    # Task 20: Visual Effects Performance Tweak
+    {
+        reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 3 /f 2>$null | Out-Null
+        
+        $mask = [byte[]](0x90, 0x12, 0x03, 0x80, 0x10, 0x00, 0x00, 0x00)
+        Set-ItemProperty -Path "HKCU\Control Panel\Desktop" -Name UserPreferencesMask -Value $mask -ErrorAction SilentlyContinue
+
+        reg add "HKCU\Control Panel\Desktop" /v FontSmoothing /t REG_SZ /d 2 /f 2>$null | Out-Null
+        reg add "HKCU\Control Panel\Desktop" /v DragFullWindows /t REG_SZ /d 1 /f 2>$null | Out-Null
+        reg add "HKCU\Control Panel\Desktop\WindowMetrics" /v MinAnimate /t REG_SZ /d 0 /f 2>$null | Out-Null
+        reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v EnableTransparency /t REG_DWORD /d 0 /f 2>$null | Out-Null
+    },
+    # Task 21: NVIDIA Control Panel Global Settings Optimization
+    {
+        if ($hasNvidia) {
+            $nvGlobalPath = "HKLM\SYSTEM\CurrentControlSet\Services\nvlddmkm\FTS"
+            reg add "$nvGlobalPath" /v EnableGR535 /t REG_DWORD /d 0 /f 2>$null | Out-Null
+            
+            $nvPolicyPath = "HKLM\SOFTWARE\NVIDIA Corporation\Global\NVTweak"
+            reg add "$nvPolicyPath" /v "0x00000001" /t REG_DWORD /d 1 /f 2>$null | Out-Null
+            reg add "$nvPolicyPath" /v "LowLatencyMode" /t REG_DWORD /d 1 /f 2>$null | Out-Null
+            reg add "$nvPolicyPath" /v "VSyncMode" /t REG_DWORD /d 0 /f 2>$null | Out-Null
+            reg add "$nvPolicyPath" /v "TextureFilteringQuality" /t REG_DWORD /d 2 /f 2>$null | Out-Null
+            
+            $nvClass = "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000"
+            reg add "$nvClass" /v CudaSysmemFallbackPolicy /t REG_DWORD /d 1 /f 2>$null | Out-Null
+        }
+    },
+    # Task 22: Disable Memory Compression & GameBar Background Processes
+    {
+        Disable-MMAgent -MemoryCompression 2>$null | Out-Null
+        reg add "HKLM\SOFTWARE\Microsoft\WindowsRuntime\ActivatableClassId\Windows.Gaming.GameBar.PresenceServer.Internal.PresenceWriter" /v ActivationType /t REG_DWORD /d 0 /f 2>$null | Out-Null
+    },
+    # Task 23: Disable Hard Disk Timeout & Fast Startup Issues
+    {
+        powercfg -change -disk-timeout-ac 0 2>$null | Out-Null
+        reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v HiberbootEnabled /t REG_DWORD /d 0 /f 2>$null | Out-Null
+    },
+    # Task 24: USB Power Saving Disable
+    {
+        powercfg -setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e282b3-a540-4cb1-977f-0f4ed4601257 0 2>$null | Out-Null
+        powercfg -setactive SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 2>$null | Out-Null
+    },
+    # Task 25: Disable NetBIOS over TCP/IP
+    {
+        $regPath = "HKLM:\SYSTEM\CurrentControlSet\Services\NetBT\Parameters\Interfaces"
+        Get-ChildItem $regPath -ErrorAction SilentlyContinue | ForEach-Object {
+            Set-ItemProperty -Path $_.PSPath -Name NetbiosOptions -Value 2 -ErrorAction SilentlyContinue
+        }
     }
 )
 
