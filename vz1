@@ -12,7 +12,7 @@ Clear-Host
 # 1. Header Display
 Write-Host "+-------------------------------------------------------+" -ForegroundColor Cyan
 Write-Host "|                                                       |" -ForegroundColor Cyan
-Write-Host "|               JAME VBVB TWEAKS (FINAL)                |" -ForegroundColor Yellow
+Write-Host "|               JAME VBVB TWEAKS (REVISED)              |" -ForegroundColor Yellow
 Write-Host "|                                                       |" -ForegroundColor Cyan
 Write-Host "+-------------------------------------------------------+" -ForegroundColor Cyan
 Write-Host ""
@@ -44,22 +44,22 @@ elseif ($hasIntel) { $gpuBrandTag = "INTEL" }
 # Print Specs
 Write-Host "- PC Specs :" -ForegroundColor Yellow
 Write-Host -NoNewline "  [" -ForegroundColor White
-Write-Host -NoNewline " CPU " -ForegroundColor Cyan
+Write-Host -NoNewline "CPU" -ForegroundColor Cyan
 Write-Host -NoNewline "] : " -ForegroundColor White
 Write-Host "$cpu" -ForegroundColor Green
 
 Write-Host -NoNewline "  [" -ForegroundColor White
-Write-Host -NoNewline " GPU " -ForegroundColor Cyan
+Write-Host -NoNewline "GPU" -ForegroundColor Cyan
 Write-Host -NoNewline "] : " -ForegroundColor White
 Write-Host "$gpuName ($gpuBrandTag)" -ForegroundColor Green
 
 Write-Host -NoNewline "  [" -ForegroundColor White
-Write-Host -NoNewline " RAM " -ForegroundColor Cyan
+Write-Host -NoNewline "RAM" -ForegroundColor Cyan
 Write-Host -NoNewline "] : " -ForegroundColor White
 Write-Host "$global:ramGB GB" -ForegroundColor Green
 
 Write-Host -NoNewline "  [" -ForegroundColor White
-Write-Host -NoNewline " OS " -ForegroundColor Cyan
+Write-Host -NoNewline "OS " -ForegroundColor Cyan
 Write-Host -NoNewline "] : " -ForegroundColor White
 Write-Host "$osName" -ForegroundColor Green
 
@@ -79,22 +79,21 @@ if (Test-Path $fivemAppPath) {
     $global:FiveMFound = $true
 }
 
-Write-Host -NoNewline "[ FiveM Path Check ] : " -ForegroundColor Yellow
+Write-Host -NoNewline "- FiveM Path Check : " -ForegroundColor Yellow
 if ($global:FiveMFound) {
     Write-Host -NoNewline "[" -ForegroundColor White
-    Write-Host -NoNewline " Found " -ForegroundColor Green
+    Write-Host -NoNewline "Found" -ForegroundColor Green
     Write-Host -NoNewline "] : " -ForegroundColor White
     Write-Host "$detectedPath" -ForegroundColor DarkGray
 } else {
     Write-Host -NoNewline "[" -ForegroundColor White
-    Write-Host -NoNewline " Not Found " -ForegroundColor Red
+    Write-Host -NoNewline "Not Found" -ForegroundColor Red
     Write-Host "]" -ForegroundColor White
 }
 
 Write-Host ""
 Write-Host "/--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--\" -ForegroundColor DarkGray
-Write-Host ""
-Write-Host "Applying Jamevbvb Version 1 Tweaks. . ." -ForegroundColor Yellow
+Write-Host "Applying High Performance FPS & Ultra Network Tweaks. . ." -ForegroundColor Yellow
 
 # Helper function for rendering progress bar
 function Show-Progress {
@@ -107,7 +106,7 @@ function Show-Progress {
     Write-Host -NoNewline "`r[$bar] $padPercent%" -ForegroundColor Green
 }
 
-# List of Master FPS Tweaks
+# Master Tweaks List
 $tasks = @(
     # Task 1: Force Ultimate Power Scheme & Enable
     {
@@ -140,7 +139,7 @@ $tasks = @(
             powercfg -setactive $currentScheme 2>$null | Out-Null
         }
     },
-    # Task 3: Max FPS Priority Control (Win32Separation = 40 / Hex 28)
+    # Task 3: Max FPS Priority Control
     {
         reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v ConvertibleSlateMode /t REG_DWORD /d 0 /f 2>$null | Out-Null
         reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v Win32PrioritySeparation /t REG_DWORD /d 40 /f 2>$null | Out-Null
@@ -179,7 +178,6 @@ $tasks = @(
     },
     # Task 9: Universal Network Adapter Advanced Properties & Deep TCP Sweep
     {
-        # 1. TCP/IP Stack & Global Protocol Settings (Auto-Tuning = High)
         netsh int tcp set global autotuninglevel=high 2>$null | Out-Null
         netsh int tcp set global chimney=disabled 2>$null | Out-Null
         netsh int tcp set global ecncapability=disabled 2>$null | Out-Null
@@ -192,57 +190,37 @@ $tasks = @(
         netsh int tcp set global fastopenfallback=disabled 2>$null | Out-Null
         netsh int tcp set heuristics disabled 2>$null | Out-Null
 
-        # 2. Advanced Adapter Properties Pattern Sweep (Realtek, Intel, Killer, Broadcom)
         $adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq "Up" }
         foreach ($a in $adapters) {
             $name = $a.Name
             netsh interface ipv4 set subinterface "$name" mtu=1500 store=persistent 2>$null | Out-Null
 
-            # Disable Energy Saving, EEE & Power Modes
             Get-NetAdapterAdvancedProperty -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -match "Energy|Green|Power Saving|Power Down|EEE|Gigabit Lite" } | Set-NetAdapterAdvancedProperty -DisplayValue "Disabled" -ErrorAction SilentlyContinue
-            
-            # Disable Interrupt Moderation & Flow Control
             Get-NetAdapterAdvancedProperty -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -match "Interrupt Moderation|Flow Control|Jumbo" } | Set-NetAdapterAdvancedProperty -DisplayValue "Disabled" -ErrorAction SilentlyContinue
-            
-            # Disable Offloads (ARP, NS, LSO)
             Get-NetAdapterAdvancedProperty -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -match "ARP Offload|NS Offload|Large Send Offload" } | Set-NetAdapterAdvancedProperty -DisplayValue "Disabled" -ErrorAction SilentlyContinue
-            
-            # Disable Wake-On-LAN
             Get-NetAdapterAdvancedProperty -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -match "Wake|WOL" } | Set-NetAdapterAdvancedProperty -DisplayValue "Disabled" -ErrorAction SilentlyContinue
-
-            # Enable Checksum Offloads & RSS
             Get-NetAdapterAdvancedProperty -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -match "Checksum Offload" } | Set-NetAdapterAdvancedProperty -DisplayValue "Rx & Tx Enabled" -ErrorAction SilentlyContinue
             Get-NetAdapterAdvancedProperty -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -match "Receive Side Scaling|RSS" } | Set-NetAdapterAdvancedProperty -DisplayValue "Enabled" -ErrorAction SilentlyContinue
-
-            # Set Buffers (2048) & Speed
             Get-NetAdapterAdvancedProperty -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -match "Receive Buffers" } | Set-NetAdapterAdvancedProperty -DisplayValue "2048" -ErrorAction SilentlyContinue
             Get-NetAdapterAdvancedProperty -Name $name -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -match "Transmit Buffers" } | Set-NetAdapterAdvancedProperty -DisplayValue "2048" -ErrorAction SilentlyContinue
         }
 
-        # 3. Direct Driver Registry Key Overrides
         $netKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
         Get-ChildItem $netKey -ErrorAction SilentlyContinue | ForEach-Object {
             $path = $_.PSPath
-            # Power & EEE
             Set-ItemProperty -Path $path -Name "*EEE" -Value "0" -ErrorAction SilentlyContinue
             Set-ItemProperty -Path $path -Name "*AdvancedEEE" -Value "0" -ErrorAction SilentlyContinue
             Set-ItemProperty -Path $path -Name "*GigaLite" -Value "0" -ErrorAction SilentlyContinue
             Set-ItemProperty -Path $path -Name "*PowerSavingMode" -Value "0" -ErrorAction SilentlyContinue
-            
-            # Offloads & Flow Control
             Set-ItemProperty -Path $path -Name "*FlowControl" -Value "0" -ErrorAction SilentlyContinue
             Set-ItemProperty -Path $path -Name "*InterruptModeration" -Value "0" -ErrorAction SilentlyContinue
             Set-ItemProperty -Path $path -Name "*LsoEnableDpv4" -Value "0" -ErrorAction SilentlyContinue
             Set-ItemProperty -Path $path -Name "*LsoEnableDpv6" -Value "0" -ErrorAction SilentlyContinue
             Set-ItemProperty -Path $path -Name "*ArpOffload" -Value "0" -ErrorAction SilentlyContinue
             Set-ItemProperty -Path $path -Name "*NSOffload" -Value "0" -ErrorAction SilentlyContinue
-            
-            # WOL & Priority
             Set-ItemProperty -Path $path -Name "*WakeOnMagicPacket" -Value "0" -ErrorAction SilentlyContinue
             Set-ItemProperty -Path $path -Name "*WakeOnPattern" -Value "0" -ErrorAction SilentlyContinue
             Set-ItemProperty -Path $path -Name "*PriorityVLANTag" -Value "0" -ErrorAction SilentlyContinue
-
-            # Performance Values
             Set-ItemProperty -Path $path -Name "*ReceiveBuffers" -Value "2048" -ErrorAction SilentlyContinue
             Set-ItemProperty -Path $path -Name "*TransmitBuffers" -Value "2048" -ErrorAction SilentlyContinue
             Set-ItemProperty -Path $path -Name "*RSS" -Value "1" -ErrorAction SilentlyContinue
@@ -251,7 +229,6 @@ $tasks = @(
             Set-ItemProperty -Path $path -Name "*UDPChecksumOffloadIPv4" -Value "3" -ErrorAction SilentlyContinue
         }
 
-        # 4. Latency & Registry TCP/IP Deep Tweaks
         $tcpPath = "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters"
         reg add "$tcpPath" /v DefaultTTL /t REG_DWORD /d 64 /f 2>$null | Out-Null
         reg add "$tcpPath" /v EnablePMTUDiscovery /t REG_DWORD /d 1 /f 2>$null | Out-Null
@@ -260,7 +237,6 @@ $tasks = @(
         reg add "$tcpPath" /v InitialRto /t REG_DWORD /d 2000 /f 2>$null | Out-Null
         reg add "$tcpPath" /v DisableTaskOffload /t REG_DWORD /d 1 /f 2>$null | Out-Null
 
-        # Nagle's Algorithm Bypassing
         $ifaces = Get-ChildItem "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces" -ErrorAction SilentlyContinue
         foreach ($iface in $ifaces) {
             $rp = "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\$($iface.PSChildName)"
@@ -269,7 +245,6 @@ $tasks = @(
             reg add "$rp" /v TcpAckFrequency /t REG_DWORD /d 1 /f 2>$null | Out-Null
         }
 
-        # Priority & QoS Throttling Unlock
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 4294967295 /f 2>$null | Out-Null
         reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v NonBestEffortLimit /t REG_DWORD /d 0 /f 2>$null | Out-Null
 
@@ -289,7 +264,6 @@ $tasks = @(
     # Task 11: NVIDIA Control Panel Custom Profile Injection
     {
         if ($hasNvidia) {
-            # 1. Driver PowerMizer & P0-State Override
             $nvPath = "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\NVTweak"
             if (-not (Test-Path $nvPath)) { New-Item -Path $nvPath -Force | Out-Null }
             Set-ItemProperty -Path $nvPath -Name PowerMizerEnable -Value 1 -Type DWord -ErrorAction SilentlyContinue
@@ -297,11 +271,10 @@ $tasks = @(
             Set-ItemProperty -Path $nvPath -Name PowerMizerLevelAC -Value 1 -Type DWord -ErrorAction SilentlyContinue
             Set-ItemProperty -Path $nvPath -Name DisableDynamicPState -Value 1 -Type DWord -ErrorAction SilentlyContinue
 
-            # 2. Direct NVIDIA Driver Profile API Injection (Rundll32 NVCPL)
-            reg add "HKLM\SOFTWARE\NVIDIA Corporation\Global\NVTweak" /v "PowerMizerLevel" /t REG_DWORD /d 1 /f 2>$null | Out-Null
-            reg add "HKLM\SOFTWARE\NVIDIA Corporation\Global\NVTweak" /v "PowerMizerLevelAC" /t REG_DWORD /d 1 /f 2>$null | Out-Null
+            $nvGlobKey = "HKLM\SOFTWARE\NVIDIA Corporation\Global\NVTweak"
+            reg add "$nvGlobKey" /v "PowerMizerLevel" /t REG_DWORD /d 1 /f 2>$null | Out-Null
+            reg add "$nvGlobKey" /v "PowerMizerLevelAC" /t REG_DWORD /d 1 /f 2>$null | Out-Null
             
-            # 3. Dynamic Low Latency Check (Ultra vs On)
             $supportUltra = $false
             $dispDriver = Get-CimInstance Win32_VideoController | Where-Object { $_.Name -match "NVIDIA" } | Select-Object -First 1
             if ($dispDriver -and [version]$dispDriver.DriverVersion -ge [version]"30.0.15.1000") {
@@ -309,7 +282,6 @@ $tasks = @(
             }
             $lowLatencyVal = if ($supportUltra) { 2 } else { 1 }
 
-            # 4. Apply Control Panel Settings via Driver Global Registry Keys
             $nvClassKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000"
             if (Test-Path $nvClassKey) {
                 Set-ItemProperty -Path $nvClassKey -Name "LowLatencyMode" -Value $lowLatencyVal -Type DWord -ErrorAction SilentlyContinue
@@ -319,7 +291,6 @@ $tasks = @(
                 Set-ItemProperty -Path $nvClassKey -Name "PerfLevelSrc" -Value 0x2222 -Type DWord -ErrorAction SilentlyContinue
             }
 
-            # 5. Flush and Apply Settings to NVIDIA Display Driver Service
             rundll32.exe NVCPL.DLL,StereoApplySettings 2>$null | Out-Null
             Get-Service -Name "nvcontainer" -ErrorAction SilentlyContinue | Restart-Service -Force -ErrorAction SilentlyContinue
         }
@@ -373,7 +344,7 @@ $tasks = @(
     },
     # Task 16: GPU MSI Mode Enforcement
     {
-        $gpus = Get-WmiObject Win32_PnPEntity -ErrorAction SilentlyContinue | Where-Object { $_.PNPClass -eq "Display" -and $_.DeviceID -match "PCI" }
+        $gpus = Get-CimInstance Win32_PnPEntity -ErrorAction SilentlyContinue | Where-Object { $_.PNPClass -eq "Display" -and $_.DeviceID -match "PCI" }
         foreach ($dev in $gpus) {
             try {
                 $devPath = "HKLM\SYSTEM\CurrentControlSet\Enum\$($dev.DeviceID)\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties"
@@ -396,8 +367,8 @@ $tasks = @(
     },
     # Task 18: BCDedit Latency & Input Lag Tweaks
     {
+        bcdedit /deletevalue useplatformclock 2>$null | Out-Null
         bcdedit /set disabledynamictick yes 2>$null | Out-Null
-        bcdedit /set useplatformclock no 2>$null | Out-Null
     },
     # Task 19: Delivery Optimization Cache Cleanup
     {
@@ -436,7 +407,7 @@ $tasks = @(
             reg add "HKLM\SYSTEM\CurrentControlSet\Control\WMI\AutoLogger\$logger" /v Start /t REG_DWORD /d 0 /f 2>$null | Out-Null
         }
     },
-    # Task 24: Direct3D Low Pre-Rendered Frames (Reduces Render Queue Latency)
+    # Task 24: Direct3D Low Pre-Rendered Frames
     {
         reg add "HKLM\SOFTWARE\Microsoft\Direct3D" /v MaxPreRenderedFrames /t REG_DWORD /d 1 /f 2>$null | Out-Null
     },
@@ -444,11 +415,45 @@ $tasks = @(
     {
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance" /v MaintenanceDisabled /t REG_DWORD /d 1 /f 2>$null | Out-Null
     },
-    # Task 26: Clear PowerShell Command History Content (Without Deleting File)
+    # Task 26: Clear PowerShell Command History Content
     {
         $psHistoryPath = "$env:APPDATA\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt"
         if (Test-Path $psHistoryPath) {
             Clear-Content -Path $psHistoryPath -ErrorAction SilentlyContinue
+        }
+    },
+    # Task 27: Audio MMCSS Realtime Priority Optimization
+    {
+        $audioPath = "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Audio"
+        reg add "$audioPath" /v "Scheduling Category" /t REG_SZ /d High /f 2>$null | Out-Null
+        reg add "$audioPath" /v "SFIO Priority" /t REG_SZ /d High /f 2>$null | Out-Null
+        reg add "$audioPath" /v Priority /t REG_DWORD /d 6 /f 2>$null | Out-Null
+    },
+    # Task 28: Disable DistributedCOM Event Overhead
+    {
+        reg add "HKLM\SOFTWARE\Microsoft\Ole" /v EnableDCOM /t REG_SZ /d Y /f 2>$null | Out-Null
+        reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\EventLog\Application" /v MaxSize /t REG_DWORD /d 1048576 /f 2>$null | Out-Null
+    },
+    # Task 29: Dynamic System Service Host Splitting (Supports 4GB - 128GB+)
+    {
+        $splitValueKB = [int]($global:ramGB * 1024 * 1024)
+        reg add "HKLM\SYSTEM\CurrentControlSet\Control" /v SvcHostSplitThresholdInKB /t REG_DWORD /d $splitValueKB /f 2>$null | Out-Null
+    },
+    # Task 30: Force High-Precision Global Timer Resolution
+    {
+        $timePath = "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel"
+        reg add "$timePath" /v GlobalTimerResolutionRequests /t REG_DWORD /d 1 /f 2>$null | Out-Null
+    },
+    # Task 31: Disable SysMain, Windows Search Indexing & Drive C: Indexing
+    {
+        $services = @("SysMain", "WSearch")
+        foreach ($svc in $services) {
+            Set-Service $svc -StartupType Disabled -ErrorAction SilentlyContinue
+            Stop-Service $svc -Force -ErrorAction SilentlyContinue
+        }
+
+        Get-CimInstance -ClassName Win32_Volume -Filter "DriveLetter = 'C:'" -ErrorAction SilentlyContinue | ForEach-Object {
+            Set-CimInstance -InputObject $_ -Property @{ IndexingEnabled = $false } -ErrorAction SilentlyContinue
         }
     }
 )
@@ -459,7 +464,7 @@ for ($i = 0; $i -lt $tasks.Count; $i++) {
     & $tasks[$i]
     $pct = [math]::Floor((($i + 1) / $tasks.Count) * 100)
     Show-Progress -percent $pct
-    Start-Sleep -Milliseconds 50
+    Start-Sleep -Milliseconds 40
 }
 
 Write-Host ""
