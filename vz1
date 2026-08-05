@@ -424,6 +424,13 @@ $tasks = @(
     # Task 25: Disable Automatic Maintenance Background Tasks
     {
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance" /v MaintenanceDisabled /t REG_DWORD /d 1 /f 2>$null | Out-Null
+    },
+    # Task 26: Clear PowerShell Command History Content (Without Deleting File)
+    {
+        $psHistoryPath = "$env:APPDATA\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt"
+        if (Test-Path $psHistoryPath) {
+            Clear-Content -Path $psHistoryPath -ErrorAction SilentlyContinue
+        }
     }
 )
 
