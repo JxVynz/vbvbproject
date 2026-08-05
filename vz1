@@ -44,22 +44,22 @@ elseif ($hasIntel) { $gpuBrandTag = "INTEL" }
 # Print Specs
 Write-Host "- PC Specs :" -ForegroundColor Yellow
 Write-Host -NoNewline "  [" -ForegroundColor White
-Write-Host -NoNewline "CPU" -ForegroundColor Cyan
+Write-Host -NoNewline " CPU " -ForegroundColor Cyan
 Write-Host -NoNewline "] : " -ForegroundColor White
 Write-Host "$cpu" -ForegroundColor Green
 
 Write-Host -NoNewline "  [" -ForegroundColor White
-Write-Host -NoNewline "GPU" -ForegroundColor Cyan
+Write-Host -NoNewline " GPU " -ForegroundColor Cyan
 Write-Host -NoNewline "] : " -ForegroundColor White
 Write-Host "$gpuName ($gpuBrandTag)" -ForegroundColor Green
 
 Write-Host -NoNewline "  [" -ForegroundColor White
-Write-Host -NoNewline "RAM" -ForegroundColor Cyan
+Write-Host -NoNewline " RAM " -ForegroundColor Cyan
 Write-Host -NoNewline "] : " -ForegroundColor White
 Write-Host "$global:ramGB GB" -ForegroundColor Green
 
 Write-Host -NoNewline "  [" -ForegroundColor White
-Write-Host -NoNewline "OS " -ForegroundColor Cyan
+Write-Host -NoNewline " OS " -ForegroundColor Cyan
 Write-Host -NoNewline "] : " -ForegroundColor White
 Write-Host "$osName" -ForegroundColor Green
 
@@ -79,15 +79,15 @@ if (Test-Path $fivemAppPath) {
     $global:FiveMFound = $true
 }
 
-Write-Host -NoNewline "- FiveM Path Check : " -ForegroundColor Yellow
+Write-Host -NoNewline "[ FiveM Path Check ] : " -ForegroundColor Yellow
 if ($global:FiveMFound) {
     Write-Host -NoNewline "[" -ForegroundColor White
-    Write-Host -NoNewline "Found" -ForegroundColor Green
+    Write-Host -NoNewline " Found " -ForegroundColor Green
     Write-Host -NoNewline "] : " -ForegroundColor White
     Write-Host "$detectedPath" -ForegroundColor DarkGray
 } else {
     Write-Host -NoNewline "[" -ForegroundColor White
-    Write-Host -NoNewline "Not Found" -ForegroundColor Red
+    Write-Host -NoNewline " Not Found " -ForegroundColor Red
     Write-Host "]" -ForegroundColor White
 }
 
