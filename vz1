@@ -12,7 +12,7 @@ Clear-Host
 # 1. Header Display
 Write-Host "+-------------------------------------------------------+" -ForegroundColor Cyan
 Write-Host "|                                                       |" -ForegroundColor Cyan
-Write-Host "|                    JAME VBVB TWEAKS                   |" -ForegroundColor Yellow
+Write-Host "|               JAME VBVB TWEAKS (FINAL)                |" -ForegroundColor Yellow
 Write-Host "|                                                       |" -ForegroundColor Cyan
 Write-Host "+-------------------------------------------------------+" -ForegroundColor Cyan
 Write-Host ""
@@ -94,7 +94,7 @@ if ($global:FiveMFound) {
 Write-Host ""
 Write-Host "/--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--\" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "Applying Jamevbvb Tweaks. . ." -ForegroundColor Yellow
+Write-Host "Applying Jamevbvb Version 1 Tweaks. . ." -ForegroundColor Yellow
 
 # Helper function for rendering progress bar
 function Show-Progress {
@@ -177,10 +177,9 @@ $tasks = @(
     {
         reg add "HKCU\Control Panel\Desktop" /v MenuShowDelay /t REG_SZ /d 0 /f 2>$null | Out-Null
     },
-    # Task 9: Network Lag, Latency, Nagle's Algorithm & Throttling Tweaks
-# Task 9: Master Ultimate Network Optimization (Full Advanced Properties + Deep TCP Tweaks)
+    # Task 9: Universal Network Adapter Advanced Properties & Deep TCP Sweep
     {
-        # 1. TCP/IP Stack & Global Protocol Settings
+        # 1. TCP/IP Stack & Global Protocol Settings (Auto-Tuning = High)
         netsh int tcp set global autotuninglevel=high 2>$null | Out-Null
         netsh int tcp set global chimney=disabled 2>$null | Out-Null
         netsh int tcp set global ecncapability=disabled 2>$null | Out-Null
@@ -281,36 +280,54 @@ $tasks = @(
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d 0 /f 2>$null | Out-Null
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NoLazyMode /t REG_DWORD /d 1 /f 2>$null | Out-Null
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v AlwaysOn /t REG_DWORD /d 1 /f 2>$null | Out-Null
+        
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "GPU Priority" /t REG_DWORD /d 8 /f 2>$null | Out-Null
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v Priority /t REG_DWORD /d 6 /f 2>$null | Out-Null
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Scheduling Category" /t REG_SZ /d High /f 2>$null | Out-Null
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "SFIO Priority" /t REG_SZ /d High /f 2>$null | Out-Null
     },
-    # Task 11: GPU Driver Tweaks (NVIDIA P0-State, Low Latency, Preemption & AMD)
+    # Task 11: NVIDIA Control Panel Custom Profile Injection
     {
         if ($hasNvidia) {
-            $nvPath = "HKLM\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\NVTweak"
-            reg add "$nvPath" /v PowerMizerEnable /t REG_DWORD /d 1 /f 2>$null | Out-Null
-            reg add "$nvPath" /v PowerMizerLevel /t REG_DWORD /d 1 /f 2>$null | Out-Null
-            reg add "$nvPath" /v PowerMizerLevelAC /t REG_DWORD /d 1 /f 2>$null | Out-Null
-            reg add "$nvPath" /v DisableDynamicPState /t REG_DWORD /d 1 /f 2>$null | Out-Null
+            # 1. Driver PowerMizer & P0-State Override
+            $nvPath = "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\NVTweak"
+            if (-not (Test-Path $nvPath)) { New-Item -Path $nvPath -Force | Out-Null }
+            Set-ItemProperty -Path $nvPath -Name PowerMizerEnable -Value 1 -Type DWord -ErrorAction SilentlyContinue
+            Set-ItemProperty -Path $nvPath -Name PowerMizerLevel -Value 1 -Type DWord -ErrorAction SilentlyContinue
+            Set-ItemProperty -Path $nvPath -Name PowerMizerLevelAC -Value 1 -Type DWord -ErrorAction SilentlyContinue
+            Set-ItemProperty -Path $nvPath -Name DisableDynamicPState -Value 1 -Type DWord -ErrorAction SilentlyContinue
 
-            $nvFtsPath = "HKLM\SYSTEM\CurrentControlSet\Services\nvlddmkm\FTS"
-            reg add "$nvFtsPath" /v EnableGR535 /t REG_DWORD /d 0 /f 2>$null | Out-Null
+            # 2. Direct NVIDIA Driver Profile API Injection (Rundll32 NVCPL)
+            reg add "HKLM\SOFTWARE\NVIDIA Corporation\Global\NVTweak" /v "PowerMizerLevel" /t REG_DWORD /d 1 /f 2>$null | Out-Null
+            reg add "HKLM\SOFTWARE\NVIDIA Corporation\Global\NVTweak" /v "PowerMizerLevelAC" /t REG_DWORD /d 1 /f 2>$null | Out-Null
+            
+            # 3. Dynamic Low Latency Check (Ultra vs On)
+            $supportUltra = $false
+            $dispDriver = Get-CimInstance Win32_VideoController | Where-Object { $_.Name -match "NVIDIA" } | Select-Object -First 1
+            if ($dispDriver -and [version]$dispDriver.DriverVersion -ge [version]"30.0.15.1000") {
+                $supportUltra = $true
+            }
+            $lowLatencyVal = if ($supportUltra) { 2 } else { 1 }
 
-            $nvClass = "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000"
-            reg add "$nvClass" /v DisablePreemption /t REG_DWORD /d 1 /f 2>$null | Out-Null
-            reg add "$nvClass" /v EnableComputePreemption /t REG_DWORD /d 0 /f 2>$null | Out-Null
-            reg add "$nvClass" /v CudaSysmemFallbackPolicy /t REG_DWORD /d 1 /f 2>$null | Out-Null
+            # 4. Apply Control Panel Settings via Driver Global Registry Keys
+            $nvClassKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000"
+            if (Test-Path $nvClassKey) {
+                Set-ItemProperty -Path $nvClassKey -Name "LowLatencyMode" -Value $lowLatencyVal -Type DWord -ErrorAction SilentlyContinue
+                Set-ItemProperty -Path $nvClassKey -Name "VSyncMode" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+                Set-ItemProperty -Path $nvClassKey -Name "TextureFilteringQuality" -Value 20 -Type DWord -ErrorAction SilentlyContinue
+                Set-ItemProperty -Path $nvClassKey -Name "DisplayRefreshRateControl" -Value 1 -Type DWord -ErrorAction SilentlyContinue
+                Set-ItemProperty -Path $nvClassKey -Name "PerfLevelSrc" -Value 0x2222 -Type DWord -ErrorAction SilentlyContinue
+            }
 
-            $nvPolicyPath = "HKLM\SOFTWARE\NVIDIA Corporation\Global\NVTweak"
-            reg add "$nvPolicyPath" /v "0x00000001" /t REG_DWORD /d 1 /f 2>$null | Out-Null
-            reg add "$nvPolicyPath" /v "LowLatencyMode" /t REG_DWORD /d 1 /f 2>$null | Out-Null
-            reg add "$nvPolicyPath" /v "VSyncMode" /t REG_DWORD /d 0 /f 2>$null | Out-Null
-            reg add "$nvPolicyPath" /v "TextureFilteringQuality" /t REG_DWORD /d 2 /f 2>$null | Out-Null
+            # 5. Flush and Apply Settings to NVIDIA Display Driver Service
+            rundll32.exe NVCPL.DLL,StereoApplySettings 2>$null | Out-Null
+            Get-Service -Name "nvcontainer" -ErrorAction SilentlyContinue | Restart-Service -Force -ErrorAction SilentlyContinue
         }
         if ($hasAMD) {
-            reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v KMD_EnableComputePreemption /t REG_DWORD /d 0 /f 2>$null | Out-Null
+            $amdKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000"
+            if (Test-Path $amdKey) {
+                Set-ItemProperty -Path $amdKey -Name KMD_EnableComputePreemption -Value 0 -Type DWord -ErrorAction SilentlyContinue
+            }
         }
     },
     # Task 12: Mouse Speed Fix & TDR Tweaks
@@ -326,7 +343,7 @@ $tasks = @(
     # Task 13: Optimized Process Priority (Above Normal = 6)
     {
         $ifeoBase = "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options"
-        foreach ($exe in @("FiveM.exe","GTA5.exe","FiveM_GTAProcess.exe","FiveM_b3258_GTAProcess.exe")) {
+        foreach ($exe in @("FiveM.exe","GTA5.exe","FiveM_GTAProcess.exe","FiveM_b3258_GTAProcess.exe","Valorant.exe","VALORANT-Win64-Shipping.exe")) {
             reg add "$ifeoBase\$exe\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 6 /f 2>$null | Out-Null
             reg add "$ifeoBase\$exe\PerfOptions" /v IoPriority /t REG_DWORD /d 2 /f 2>$null | Out-Null
         }
@@ -348,6 +365,7 @@ $tasks = @(
             Set-Service $svc -StartupType Disabled -ErrorAction SilentlyContinue
             Stop-Service $svc -Force -ErrorAction SilentlyContinue
         }
+
         reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v AllowTelemetry /t REG_DWORD /d 0 /f 2>$null | Out-Null
         reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v DoNotShowFeedbackNotifications /t REG_DWORD /d 1 /f 2>$null | Out-Null
         reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\ScriptedDiagnostics" /v EnableDiagnostics /t REG_DWORD /d 0 /f 2>$null | Out-Null
@@ -373,6 +391,7 @@ $tasks = @(
         if ($global:ramGB -ge 16) {
             reg add "$memPath" /v DisablePagingExecutive /t REG_DWORD /d 1 /f 2>$null | Out-Null
         }
+
         Disable-MMAgent -MemoryCompression 2>$null | Out-Null
     },
     # Task 18: BCDedit Latency & Input Lag Tweaks
@@ -447,7 +466,7 @@ Write-Host ""
 Write-Host ""
 
 # Completion Message
-$msg = "[+] Successfully Applied Tweaks - Please Restart PC !!!"
+$msg = "[+] Successfully Applied Tweaks. Please Restart PC."
 for ($f = 0; $f -lt 6; $f++) {
     Write-Host -NoNewline "`r$msg" -ForegroundColor Green
     Start-Sleep -Milliseconds 350
