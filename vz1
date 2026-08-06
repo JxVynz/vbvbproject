@@ -12,7 +12,7 @@ Clear-Host
 # 1. Header Display
 Write-Host "+-------------------------------------------------------+" -ForegroundColor Cyan
 Write-Host "|                                                       |" -ForegroundColor Cyan
-Write-Host "|               JAME VBVB TWEAKS (REVISED)              |" -ForegroundColor Yellow
+Write-Host "|                     JAME VBVB TWEAKS                  |" -ForegroundColor Yellow
 Write-Host "|                                                       |" -ForegroundColor Cyan
 Write-Host "+-------------------------------------------------------+" -ForegroundColor Cyan
 Write-Host ""
