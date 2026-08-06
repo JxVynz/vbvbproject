@@ -281,13 +281,6 @@ $tasks = @(
             Set-ItemProperty -Path $nvPath -Name PowerMizerLevel -Value 0 -Type DWord -ErrorAction SilentlyContinue
             Set-ItemProperty -Path $nvPath -Name PowerMizerLevelAC -Value 1 -Type DWord -ErrorAction SilentlyContinue
             Set-ItemProperty -Path $nvPath -Name DisableDynamicPState -Value 1 -Type DWord -ErrorAction SilentlyContinue
-
-            $nvClassKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000"
-            if (Test-Path $nvClassKey) {
-                Set-ItemProperty -Path $nvClassKey -Name "LowLatencyMode" -Value 1 -Type DWord -ErrorAction SilentlyContinue
-                Set-ItemProperty -Path $nvClassKey -Name "VSyncMode" -Value 0 -Type DWord -ErrorAction SilentlyContinue
-                Set-ItemProperty -Path $nvClassKey -Name "TextureFilteringQuality" -Value 20 -Type DWord -ErrorAction SilentlyContinue
-            }
         } elseif ($hasAMD) {
             $amdKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000"
             if (Test-Path $amdKey) {
