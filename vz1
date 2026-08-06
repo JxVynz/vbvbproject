@@ -12,7 +12,7 @@ Clear-Host
 # 1. Header Display
 Write-Host "+-------------------------------------------------------+" -ForegroundColor Cyan
 Write-Host "|                                                       |" -ForegroundColor Cyan
-Write-Host "|                    JAME VBVB TWEAKS                   |" -ForegroundColor Yellow
+Write-Host "|               JAME VBVB TWEAKS (REVISED)              |" -ForegroundColor Yellow
 Write-Host "|                                                       |" -ForegroundColor Cyan
 Write-Host "+-------------------------------------------------------+" -ForegroundColor Cyan
 Write-Host ""
@@ -94,7 +94,7 @@ if ($global:FiveMFound) {
 Write-Host ""
 Write-Host "/--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--\" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "Applying Performance & Network Tweaks By Jamevbvb. . ." -ForegroundColor Yellow
+Write-Host "Applying Tweaks. . ." -ForegroundColor Yellow
 
 # Helper function for rendering progress bar
 function Show-Progress {
@@ -271,7 +271,7 @@ $tasks = @(
         # Direct3D DWM MMCSS Bypass
         reg add "HKLM\SOFTWARE\Microsoft\DirectX" /v DwmEnableMmcss /t REG_DWORD /d 1 /f 2>$null | Out-Null
     },
-    # Task 11: Optimized NVIDIA PowerMizer & GPU Brand Settings
+    # Task 11: Optimized NVIDIA PowerMizer & GPU Brand Settings (NVCP Tweaks Removed)
     {
         if ($hasNvidia) {
             $nvPath = "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\NVTweak"
@@ -299,11 +299,11 @@ $tasks = @(
         reg add "$gfxPath" /v TdrDelay /t REG_DWORD /d 10 /f 2>$null | Out-Null
         reg add "$gfxPath" /v TdrDdiDelay /t REG_DWORD /d 10 /f 2>$null | Out-Null
     },
-    # Task 13: Optimized Process Priority
+    # Task 13: Optimized Process Priority (Above Normal = 6)
     {
         $ifeoBase = "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options"
         foreach ($exe in @("FiveM.exe","GTA5.exe","FiveM_GTAProcess.exe","FiveM_b3258_GTAProcess.exe","Valorant.exe","VALORANT-Win64-Shipping.exe")) {
-            reg add "$ifeoBase\$exe\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f 2>$null | Out-Null
+            reg add "$ifeoBase\$exe\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 6 /f 2>$null | Out-Null
             reg add "$ifeoBase\$exe\PerfOptions" /v IoPriority /t REG_DWORD /d 2 /f 2>$null | Out-Null
         }
     },
