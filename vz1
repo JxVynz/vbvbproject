@@ -93,7 +93,8 @@ if ($global:FiveMFound) {
 
 Write-Host ""
 Write-Host "/--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--.-.--\" -ForegroundColor DarkGray
-Write-Host "Applying High Performance FPS & Ultra Network Tweaks. . ." -ForegroundColor Yellow
+Write-Host ""
+Write-Host "Applying Performance & Network Tweaks By Jamevbvb. . ." -ForegroundColor Yellow
 
 # Helper function for rendering progress bar
 function Show-Progress {
@@ -108,23 +109,29 @@ function Show-Progress {
 
 # Master Tweaks List
 $tasks = @(
-    # Task 1: Force Ultimate Power Scheme & Enable
+    # Task 1: Check & Enable Ultimate Power Scheme (Prevent Duplicates)
     {
         $ultGuid = "e9a42b02-d5df-448d-aa00-03f14749eb61"
-        if (-not (powercfg -list | Select-String $ultGuid)) {
+        $powerList = powercfg -list
+
+        if (-not ($powerList -match $ultGuid -or $powerList -match "Ultimate Performance")) {
             powercfg -duplicatescheme $ultGuid 2>$null | Out-Null
         }
-        if (powercfg -list | Select-String $ultGuid) {
-            powercfg -setactive $ultGuid 2>$null | Out-Null
+
+        $activeUlt = (powercfg -list | Select-String "Ultimate Performance" | Select-Object -First 1)
+        if ($activeUlt -match "([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})") {
+            $targetGuid = $matches[1]
+            powercfg -setactive $targetGuid 2>$null | Out-Null
             $global:IsUltimateActive = $true
         } else {
-            $global:IsUltimateActive = $false
+            powercfg -setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c 2>$null | Out-Null
+            $global:IsUltimateActive = $true
         }
     },
     # Task 2: CPU Unpark & EPP Off
     {
         if ($global:IsUltimateActive) {
-            $currentScheme = "e9a42b02-d5df-448d-aa00-03f14749eb61"
+            $currentScheme = (powercfg -getactivescheme) -replace ".*: ([a-f0-9-]+).*", '$1'
             powercfg -setacvalueindex $currentScheme SUB_PROCESSOR CPMINCORES 100 2>$null | Out-Null
             powercfg -setacvalueindex $currentScheme SUB_PROCESSOR CPMAXCORES 100 2>$null | Out-Null
             
@@ -250,7 +257,7 @@ $tasks = @(
 
         ipconfig /flushdns 2>$null | Out-Null
     },
-    # Task 10: System Responsiveness & Multimedia Tweaks
+    # Task 10: System Responsiveness, Direct3D & Multimedia Tweaks
     {
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d 0 /f 2>$null | Out-Null
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NoLazyMode /t REG_DWORD /d 1 /f 2>$null | Out-Null
@@ -260,56 +267,44 @@ $tasks = @(
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v Priority /t REG_DWORD /d 6 /f 2>$null | Out-Null
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Scheduling Category" /t REG_SZ /d High /f 2>$null | Out-Null
         reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "SFIO Priority" /t REG_SZ /d High /f 2>$null | Out-Null
+
+        # Direct3D DWM MMCSS Bypass
+        reg add "HKLM\SOFTWARE\Microsoft\DirectX" /v DwmEnableMmcss /t REG_DWORD /d 1 /f 2>$null | Out-Null
     },
-    # Task 11: NVIDIA Control Panel Custom Profile Injection
+    # Task 11: Optimized NVIDIA PowerMizer & GPU Brand Settings
     {
         if ($hasNvidia) {
             $nvPath = "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\NVTweak"
             if (-not (Test-Path $nvPath)) { New-Item -Path $nvPath -Force | Out-Null }
+
             Set-ItemProperty -Path $nvPath -Name PowerMizerEnable -Value 1 -Type DWord -ErrorAction SilentlyContinue
-            Set-ItemProperty -Path $nvPath -Name PowerMizerLevel -Value 1 -Type DWord -ErrorAction SilentlyContinue
+            Set-ItemProperty -Path $nvPath -Name PowerMizerLevel -Value 0 -Type DWord -ErrorAction SilentlyContinue
             Set-ItemProperty -Path $nvPath -Name PowerMizerLevelAC -Value 1 -Type DWord -ErrorAction SilentlyContinue
             Set-ItemProperty -Path $nvPath -Name DisableDynamicPState -Value 1 -Type DWord -ErrorAction SilentlyContinue
 
-            $nvGlobKey = "HKLM\SOFTWARE\NVIDIA Corporation\Global\NVTweak"
-            reg add "$nvGlobKey" /v "PowerMizerLevel" /t REG_DWORD /d 1 /f 2>$null | Out-Null
-            reg add "$nvGlobKey" /v "PowerMizerLevelAC" /t REG_DWORD /d 1 /f 2>$null | Out-Null
-            
-            $supportUltra = $false
-            $dispDriver = Get-CimInstance Win32_VideoController | Where-Object { $_.Name -match "NVIDIA" } | Select-Object -First 1
-            if ($dispDriver -and [version]$dispDriver.DriverVersion -ge [version]"30.0.15.1000") {
-                $supportUltra = $true
-            }
-            $lowLatencyVal = if ($supportUltra) { 2 } else { 1 }
-
             $nvClassKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000"
             if (Test-Path $nvClassKey) {
-                Set-ItemProperty -Path $nvClassKey -Name "LowLatencyMode" -Value $lowLatencyVal -Type DWord -ErrorAction SilentlyContinue
+                Set-ItemProperty -Path $nvClassKey -Name "LowLatencyMode" -Value 1 -Type DWord -ErrorAction SilentlyContinue
                 Set-ItemProperty -Path $nvClassKey -Name "VSyncMode" -Value 0 -Type DWord -ErrorAction SilentlyContinue
                 Set-ItemProperty -Path $nvClassKey -Name "TextureFilteringQuality" -Value 20 -Type DWord -ErrorAction SilentlyContinue
-                Set-ItemProperty -Path $nvClassKey -Name "DisplayRefreshRateControl" -Value 1 -Type DWord -ErrorAction SilentlyContinue
-                Set-ItemProperty -Path $nvClassKey -Name "PerfLevelSrc" -Value 0x2222 -Type DWord -ErrorAction SilentlyContinue
             }
-
-            rundll32.exe NVCPL.DLL,StereoApplySettings 2>$null | Out-Null
-            Get-Service -Name "nvcontainer" -ErrorAction SilentlyContinue | Restart-Service -Force -ErrorAction SilentlyContinue
-        }
-        if ($hasAMD) {
+        } elseif ($hasAMD) {
             $amdKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000"
             if (Test-Path $amdKey) {
                 Set-ItemProperty -Path $amdKey -Name KMD_EnableComputePreemption -Value 0 -Type DWord -ErrorAction SilentlyContinue
             }
         }
     },
-    # Task 12: Mouse Speed Fix & TDR Tweaks
+    # Task 12: Mouse Speed Fix & Safe Optimized TDR Tweaks
     {
         reg add "HKCU\Control Panel\Mouse" /v MouseSpeed /t REG_SZ /d 0 /f 2>$null | Out-Null
         reg add "HKCU\Control Panel\Mouse" /v MouseThreshold1 /t REG_SZ /d 0 /f 2>$null | Out-Null
         reg add "HKCU\Control Panel\Mouse" /v MouseThreshold2 /t REG_SZ /d 0 /f 2>$null | Out-Null
         
         $gfxPath = "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers"
-        reg add "$gfxPath" /v TdrDelay /t REG_DWORD /d 10 /f 2>$null | Out-Null
         reg add "$gfxPath" /v TdrLevel /t REG_DWORD /d 1 /f 2>$null | Out-Null
+        reg add "$gfxPath" /v TdrDelay /t REG_DWORD /d 10 /f 2>$null | Out-Null
+        reg add "$gfxPath" /v TdrDdiDelay /t REG_DWORD /d 10 /f 2>$null | Out-Null
     },
     # Task 13: Optimized Process Priority (Above Normal = 6)
     {
